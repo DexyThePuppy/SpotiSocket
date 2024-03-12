@@ -51,22 +51,26 @@ async def server(websocket, path):
     result = sp.current_playback()
     devices = sp.devices()
     tempstatus = '!init'
-    PLAY_STATUS = result['shuffle_state']
-    if PLAY_STATUS:
-        tempstatus += 'True\t'
+    
+    if result:  # Check if result is not None
+        PLAY_STATUS = result['shuffle_state']
+        if PLAY_STATUS:
+            tempstatus += 'True\t'
+        else:
+            tempstatus += 'False\t'
+        REPEAT_STATUS = result['repeat_state']
+        if REPEAT_STATUS == "off":
+            tempstatus += '0\t'
+        elif REPEAT_STATUS == "context":
+            tempstatus += '1\t'
+        elif REPEAT_STATUS == "track":
+            tempstatus += "2\t"
+        tempstatus += str(result['is_playing']) + "\t\t\t\t\t"
     else:
-        tempstatus += 'False\t'
-    REPEAT_STATUS = result['repeat_state']
-    if REPEAT_STATUS == "off":
-        tempstatus += '0\t'
-    elif REPEAT_STATUS == "context":
-        tempstatus += '1\t'
-    elif REPEAT_STATUS == "track":
-        tempstatus += "2\t"
-    tempstatus += str(result['is_playing']) + "\t\t\t\t\t"
+        tempstatus += 'No active playback\t'
 
     await websocket.send(tempstatus)
-    print (get_time(),'Client connected!')
+    print(get_time(), 'Client connected!')
     results = ""
     playlists = sp.current_user_playlists()
     playlistarr = []

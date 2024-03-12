@@ -1,6 +1,6 @@
 spotify:
-    clientID: XXXXXXXXXXXXXXXXXXXXXXXXX
-    clientSecret: XXXXXXXXXXXXXXXXXXXXXX
-    redirectURI: http://localhost
+    clientID: 0f938c11fa3a424a94bfe61ad0becb46
+    clientSecret: 96ee9f8d822746cc878a4f8da5679d9f
+    redirectURI: http://localhost:8080
     scope: user-library-modify,user-library-read,user-read-currently-playing,user-read-playback-position,user-read-playback-state,user-modify-playback-state,app-remote-control,streaming,playlist-read-private,playlist-modify-private,playlist-modify-public,playlist-read-collaborative
     cache: .spotipyoauthcache
