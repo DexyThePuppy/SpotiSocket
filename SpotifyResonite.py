@@ -5,7 +5,9 @@ from datetime import datetime
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 import yaml
+import requests
 import websockets
+
 
 def install_and_import(package, import_name=None):
     try:
@@ -87,9 +89,12 @@ async def monitor_spotify_playback():
             artist_names = ', '.join(artist['name'] for artist in result['item']['artists'])
             track_name = result['item']['name']
             current_track = f"{artist_names} - {track_name}"
-            
+            canvas = f"https://spotify-canvas-api-weld.vercel.app/spotify?id={result['item']['uri']}"
+
             if current_status != last_status or current_track != last_track:
-                print(f"{get_time()} Status: {current_status}, Track: {current_track}")
+                url = f"{canvas}"
+                response = requests.get(url)
+                print(f"{get_time()} Status: {current_status}, Track: {current_track}, Canvas: {response.text}")
                 last_status = current_status
                 last_track = current_track
         else:
@@ -105,3 +110,6 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
+
+

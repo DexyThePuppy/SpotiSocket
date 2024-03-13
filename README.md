@@ -1,7 +1,7 @@
 # SpotifySocket
- Websocket code for Neos spotify controller
+ Websocket code for Resonite spotify controller
 
-This is the server code for the Spotify controller. The code will allow you to control your spotify client from inside of Neos. (Premium account required).
+This is the server code for the Spotify controller. The code will allow you to control your spotify client from inside of Resonite. (Premium account required).
 
 License:
 
@@ -15,7 +15,7 @@ These scripts are subject to the CC BY-NC 4.0 license, meaning you are free to t
 - Automatically syncs with your Spotify client on startup and during playback
 - You and your friends can all use the player, however you can disable others from interacting with it
 - Play from your public and private playlists (liked songs not supported)
-- Share the music with your Neos friends with optional streaming. Turn the controller into a player!
+- Share the music with your Resonite friends with optional streaming. Turn the controller into a player!
 
 Here's how to get it working...
 
@@ -27,13 +27,13 @@ This tool runs entirely on Python. If you don't have it, head over to https://ww
 
 This program requires a couple things from Spotify to get working. Head over to their developer website at https://developer.spotify.com/dashboard/login and log into your account. Then, click "Create an App". Then, enter a name and description. It can be anything, but if you plan on having multiple apps, you might want to use identifiable information. Read and agree to the terms and continue. Once your dashboard is loaded, click 'Edit settings', and find 'redirect URL'. Enter in 'http://localhost:8000'. Save those settings and click "show client secret". From there, you need to copy the client ID, client secret, and redirect URL into the config file.
 
-## Step 2, In Neos:
+## Step 2, In Resonite:
 
-Neos setup is easy! Just go into the SpotifySocket folder in my public and spawn it out, then click the connect button. It should open a window on your desktop, asking for permissions to connect to your local server (you only need to do this once). After that, you're done! Enjoy your tunes on your own, or with friends. The controller can be made completely local by enabling the "local toggle" and clicking it. Green means global. 
+Resonite setup is easy! Just go into the SpotifySocket folder in my public and spawn it out, then click the connect button. It should open a window on your desktop, asking for permissions to connect to your local server (you only need to do this once). After that, you're done! Enjoy your tunes on your own, or with friends. The controller can be made completely local by enabling the "local toggle" and clicking it. Green means global. 
 
 ## Step 3, Configuring streaming (optional):
 
-This program, along with the controller inside Neos, have the cool ability of easily transforming into a Spotify player you can use to play (and control!) your music with your friends. To do this, you will need a way to stream your audio with low latency. I use VoiceMeeter to do this, but however you isolate the audio, you can then spawn out an audio stream in Neos from your Home menu and drop it into the player.
+This program, along with the controller inside Resonite, have the cool ability of easily transforming into a Spotify player you can use to play (and control!) your music with your friends. To do this, you will need a way to stream your audio with low latency. I use VoiceMeeter to do this, but however you isolate the audio, you can then spawn out an audio stream in Resonite from your Home menu and drop it into the player.
 
 # Issues? Here are some known bugs/tips
 
