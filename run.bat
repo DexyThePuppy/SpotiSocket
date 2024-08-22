@@ -1,3 +1,5 @@
 @echo off
-py SpotifyNeos_2.py
+py -m pip install spotipy
+py -m pip install websockets
+py SpotifyResonite.py
 pause
