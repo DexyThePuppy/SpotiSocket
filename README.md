@@ -31,6 +31,9 @@ This program requires a couple things from Spotify to get working. Head over to 
 
 Resonite setup is easy! Just go into the SpotifySocket folder in my public and spawn it out, then click the connect button. It should open a window on your desktop, asking for permissions to connect to your local server (you only need to do this once). After that, you're done! Enjoy your tunes on your own, or with friends. The controller can be made completely local by enabling the "local toggle" and clicking it. Green means global. 
 
+Heres the Folder link:
+resrec:///U-1NWSXyNbyjY/R-E9A41D51155F6745E36D03AD17F617A3ED8DE6E3FD6589339AECEBCBAFEB4BA3
+
 ## Step 3, Configuring streaming (optional):
 
 This program, along with the controller inside Resonite, have the cool ability of easily transforming into a Spotify player you can use to play (and control!) your music with your friends. To do this, you will need a way to stream your audio with low latency. I use VoiceMeeter to do this, but however you isolate the audio, you can then spawn out an audio stream in Resonite from your Home menu and drop it into the player.
