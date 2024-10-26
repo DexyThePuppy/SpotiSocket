@@ -3,6 +3,8 @@
 
 This is the server code for the Spotify controller. The code will allow you to control your spotify client from inside of Resonite. (Premium account required).
 
+**FORK NOTICE**: This fork includes updates to utilize the Spotify Canvas API for displaying the currently playing song's canvas art in Resonite. 
+
 License:
 
 These scripts are subject to the CC BY-NC 4.0 license, meaning you are free to take, modify, build upon, or remix the source code as long as credit is provided and that the use is non commercial. Read more here: https://creativecommons.org/licenses/by-nc/4.0/
@@ -16,6 +18,7 @@ These scripts are subject to the CC BY-NC 4.0 license, meaning you are free to t
 - You and your friends can all use the player, however you can disable others from interacting with it
 - Play from your public and private playlists (liked songs not supported)
 - Share the music with your Resonite friends with optional streaming. Turn the controller into a player!
+- **NEW:** Displays the currently playing song's Canvas art in Resonite
 
 Here's how to get it working...
 
@@ -43,4 +46,4 @@ This program, along with the controller inside Resonite, have the cool ability o
 - The Spotify API requires an active device to work properly. If you pause your music long enough, Spotify will forget what you're listening on, and attempting to start the server like this will cause an error. If the player disconnects from the server and the server is throwing errors, it is because you left the music paused too long. This is not fixable. 
 - The current player sometimes doesn't register when other users press some buttons, so if the player doesn't react, try clicking them again.
 
-Any questions or errors? PM me ingame or shoot me a discord message at Kodufan#7558.
+Any questions or errors? PM me ingame or shoot me a discord message at DexyThePuppy.
