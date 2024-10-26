@@ -26,7 +26,7 @@ This tool is powered by Python. If you don't have it installed, head over to [ht
 
 1. Visit the Spotify Developer Dashboard: [https://developer.spotify.com/dashboard/login](https://developer.spotify.com/dashboard/login)
 2. **Create an App:** Provide a name and description (choose something identifiable). 
-3. **Edit Settings:** Go to 'Edit settings', find 'redirect URL', and enter 'http://localhost:1337'.
+3. **Edit Settings:** Go to 'Edit settings', find 'redirect URL', and enter 'http://localhost:1337/callback'.
 4. **Retrieve Credentials:** Click "show client secret" and copy the client ID, client secret, and redirect URL into the `config.yml` file.
 
 ### Step 2: Resonite Setup 🌐
