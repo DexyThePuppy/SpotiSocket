@@ -1,49 +1,48 @@
-# SpotifySocket
- Websocket code for Resonite spotify controller
+# SpotifySocket 🎧
 
-This is the server code for the Spotify controller. The code will allow you to control your spotify client from inside of Resonite. (Premium account required).
+Websocket code for Resonite spotify controller
 
-**FORK NOTICE**: This fork includes updates to utilize the Spotify Canvas API for displaying the currently playing song's canvas art in Resonite. 
+This is the server code for the Spotify controller. The code will allow you to control your Spotify client from inside of Resonite. (Premium Spotify account required).
 
-License:
+**FORK NOTICE**: This fork includes updates to utilize the Spotify Canvas API for displaying the currently playing song's canvas art in Resonite. 🖼️
 
-These scripts are subject to the CC BY-NC 4.0 license, meaning you are free to take, modify, build upon, or remix the source code as long as credit is provided and that the use is non commercial. Read more here: https://creativecommons.org/licenses/by-nc/4.0/
+## ✨ Features:
 
-## Features:
+- **Seamless Control:** See song information, including the album icon, and enjoy effortless control over playback with play, pause, skip, and previous track functionality. ⏯️
+- **Smooth Seeking:** Navigate through your song with precision using the intuitive progress bar. 🏄‍♂️
+- **Automatic Syncing:** Enjoy uninterrupted listening with automatic syncing to your Spotify client on startup and during playback. 🔄
+- **Collaborative Listening:** Share the musical experience! You and your friends can use the player, with options to manage control access.  🎉
+- **Playlist Power:** Dive into your music library and play from your public and private playlists (liked songs not supported). 🎶
+- **Stream Together:** Elevate the experience by transforming the controller into a shared Spotify player! Stream your audio with friends for a truly connected listening session.  🎤
+- **Canvas Art Integration:** Immerse yourself in the visual world of music with the display of the currently playing song's Canvas art in Resonite.  🎨
 
-- See the song information, including the album icon
-- Play, pause, skip, and play previous tracks
-- Seek through your song with the progress bar
-- Automatically syncs with your Spotify client on startup and during playback
-- You and your friends can all use the player, however you can disable others from interacting with it
-- Play from your public and private playlists (liked songs not supported)
-- Share the music with your Resonite friends with optional streaming. Turn the controller into a player!
-- **NEW:** Displays the currently playing song's Canvas art in Resonite
+## 🚀 Getting Started:
 
-Here's how to get it working...
+### Step 0: Python Installation 🐍
 
-## Step 0, Installing Python:
+This tool is powered by Python. If you don't have it installed, head over to [https://www.python.org/](https://www.python.org/) and download the latest stable version. **Make sure to click the tickbox to add Python to PATH!**
 
-This tool runs entirely on Python. If you don't have it, head over to https://www.python.org/ and grab yourself the latest stable copy. **Make sure to click the tickbox to add Python to PATH!**
+### Step 1: Spotify Configuration 🔑
 
-## Step 1, Configuring Spotify:
+1. Visit the Spotify Developer Dashboard: [https://developer.spotify.com/dashboard/login](https://developer.spotify.com/dashboard/login)
+2. **Create an App:** Provide a name and description (choose something identifiable). 
+3. **Edit Settings:** Go to 'Edit settings', find 'redirect URL', and enter 'http://localhost:1337'.
+4. **Retrieve Credentials:** Click "show client secret" and copy the client ID, client secret, and redirect URL into the `config.yml` file.
 
-This program requires a couple things from Spotify to get working. Head over to their developer website at https://developer.spotify.com/dashboard/login and log into your account. Then, click "Create an App". Then, enter a name and description. It can be anything, but if you plan on having multiple apps, you might want to use identifiable information. Read and agree to the terms and continue. Once your dashboard is loaded, click 'Edit settings', and find 'redirect URL'. Enter in 'http://localhost:8000'. Save those settings and click "show client secret". From there, you need to copy the client ID, client secret, and redirect URL into the config file.
+### Step 2: Resonite Setup 🌐
 
-## Step 2, In Resonite:
+1. **Find the Folder:** Locate the SpotifySocket folder in Resonite (link provided below).
+2. **Spawn and Connect:** Spawn the folder and click the connect button. Grant permissions to connect to your local server (one-time setup).
 
-Resonite setup is easy! Just go into the SpotifySocket folder in my public and spawn it out, then click the connect button. It should open a window on your desktop, asking for permissions to connect to your local server (you only need to do this once). After that, you're done! Enjoy your tunes on your own, or with friends. The controller can be made completely local by enabling the "local toggle" and clicking it. Green means global. 
+Folder Link: `resrec:///U-1NWSXyNbyjY/R-E9A41D51155F6745E36D03AD17F617A3ED8DE6E3FD6589339AECEBCBAFEB4BA3`
 
-Heres the Folder link:
-resrec:///U-1NWSXyNbyjY/R-E9A41D51155F6745E36D03AD17F617A3ED8DE6E3FD6589339AECEBCBAFEB4BA3
+### Step 3: Optional Streaming Setup 🎧
 
-## Step 3, Configuring streaming (optional):
+Transform the controller into a shared Spotify player! To do this, you'll need a way to stream your audio with low latency (e.g., VoiceMeeter). Once configured, spawn an audio stream in Resonite and drop it into the player. 
 
-This program, along with the controller inside Resonite, have the cool ability of easily transforming into a Spotify player you can use to play (and control!) your music with your friends. To do this, you will need a way to stream your audio with low latency. I use VoiceMeeter to do this, but however you isolate the audio, you can then spawn out an audio stream in Resonite from your Home menu and drop it into the player.
+## 💡  Tips & Troubleshooting:
 
-# Issues? Here are some known bugs/tips
+- **Active Device Required:**  The Spotify API needs an active device. Leaving music paused for extended periods might cause the server to disconnect. Simply restart the server if this happens.
+- **Button Responsiveness:**  If the player doesn't seem to react to button presses, try clicking again. 
 
-- The Spotify API requires an active device to work properly. If you pause your music long enough, Spotify will forget what you're listening on, and attempting to start the server like this will cause an error. If the player disconnects from the server and the server is throwing errors, it is because you left the music paused too long. This is not fixable. 
-- The current player sometimes doesn't register when other users press some buttons, so if the player doesn't react, try clicking them again.
-
-Any questions or errors? PM me ingame or shoot me a discord message at DexyThePuppy.
+Let the music move you! If you have any questions or encounter errors, feel free to PM me in-game or reach out on Discord at Kodufan#7558.  🎶
