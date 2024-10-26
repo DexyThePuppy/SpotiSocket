@@ -1,115 +1,394 @@
-from pip._internal import main as pipmain
 import asyncio
-import os
+import logging
 from datetime import datetime
+from typing import Optional, Dict, Any
+
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 import yaml
-import requests
+import aiohttp
 import websockets
+from websockets.server import WebSocketServerProtocol
+from bs4 import BeautifulSoup
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    datefmt='[%d/%m/%Y %H:%M:%S]'
+)
+logger = logging.getLogger(__name__)
 
-def install_and_import(package, import_name=None):
-    try:
-        if import_name:
-            __import__(import_name)
-        else:
-            __import__(package)
-    except ImportError:
-        pipmain(['install', package])
-        if import_name:
-            __import__(import_name)
-        else:
-            __import__(package)
+class SpotifyWebSocketServer:
+    def __init__(self, config_path: str = "config.yml"):
+        self.config = self._load_config(config_path)
+        self.spotify: Optional[spotipy.Spotify] = None
+        self.last_playback_state: Dict[str, Any] = {}
+        self.session: Optional[aiohttp.ClientSession] = None
+        self.websocket_port = 8765
+        self.search_results = None
 
-install_and_import('websockets')
-install_and_import('spotipy')
-install_and_import('pyyaml', 'yaml')
+    @staticmethod
+    def _load_config(config_path: str) -> dict:
+        """Load configuration from YAML file."""
+        try:
+            with open(config_path, "r") as file:
+                return yaml.safe_load(file)
+        except Exception as e:
+            logger.error(f"Failed to load config: {e}")
+            raise
 
-def get_time():
-    return datetime.now().strftime("[%d/%m/%Y %H:%M:%S]:")
+    async def initialize(self) -> None:
+        """Initialize Spotify client and aiohttp session."""
+        try:
+            auth_manager = SpotifyOAuth(
+                client_id=self.config["spotify"]["clientID"],
+                client_secret=self.config["spotify"]["clientSecret"],
+                redirect_uri="http://localhost:1337/callback",
+                scope=self.config["spotify"]["scope"],
+                cache_path=self.config["spotify"]["cache"],
+                open_browser=True
+            )
 
-def load_config():
-    file_path = os.path.join(os.getcwd(), "config.yml")
-    with open(file_path, "r") as ymlfile:
-        return yaml.safe_load(ymlfile)
+            self.spotify = spotipy.Spotify(auth_manager=auth_manager)
+            self.session = aiohttp.ClientSession()
 
-cfg = load_config()
+            # Test connection with retry logic
+            retry_count = 3
+            for attempt in range(retry_count):
+                try:
+                    self.spotify.devices()
+                    logger.info("Connected to Spotify successfully!")
+                    break
+                except Exception as e:
+                    if attempt == retry_count - 1:
+                        raise
+                    logger.warning(f"Connection attempt {attempt + 1} failed: {e}. Retrying...")
+                    await asyncio.sleep(1)
 
-sp = spotipy.Spotify(auth_manager=SpotifyOAuth(
-    client_id=cfg["spotify"]["clientID"],
-    client_secret=cfg["spotify"]["clientSecret"],
-    redirect_uri=cfg["spotify"]["redirectURI"],
-    scope=cfg["spotify"]["scope"],
-    cache_path=cfg["spotify"]["cache"],
-    open_browser=True))
+        except Exception as e:
+            logger.error(f"Failed to initialize Spotify client: {e}")
+            raise
 
-test = sp.devices()
-print(get_time(), "Connected to Spotify successfully!")
+    async def cleanup(self) -> None:
+        """Cleanup resources."""
+        if self.session:
+            await self.session.close()
 
-async def server(websocket, path):
-    print(get_time(), 'Client connected!')
-    try:
-        async for message in websocket:
-            process_message(message, websocket)
-    except Exception as e:
-        print(get_time(), "Error:", e)
-    finally:
-        print(get_time(), "Client disconnected")
+    async def handle_websocket(self, websocket: WebSocketServerProtocol) -> None:
+        """Handle WebSocket connections."""
+        logger.info('Client connected!')
+        try:
+            # Send initial state
+            await self.send_initial_state(websocket)
+            async for message in websocket:
+                await self.process_message(message, websocket)
+        except websockets.exceptions.ConnectionClosed:
+            logger.info("Client disconnected normally")
+        except Exception as e:
+            logger.error(f"WebSocket error: {e}")
+        finally:
+            logger.info("Client disconnected")
 
-async def process_message(message, websocket):
-    command, *args = message.split(";")
-    if command == 'current':
-        await handle_current_playback(websocket)
-    elif command == 'playlists':
-        await send_playlists(websocket)
+    async def send_initial_state(self, websocket: WebSocketServerProtocol) -> None:
+        """Send initial state to newly connected client."""
+        try:
+            result = self.spotify.current_playback()
+            if result:
+                tempstatus = '!init'
+                tempstatus += f"{str(result['shuffle_state'])}\t"
+                
+                repeat_state = result['repeat_state']
+                repeat_value = {'off': '0', 'context': '1', 'track': '2'}.get(repeat_state, '0')
+                tempstatus += f"{repeat_value}\t"
+                
+                tempstatus += f"{str(result['is_playing'])}\t\t\t\t\t"
+                await websocket.send(tempstatus)
+        except Exception as e:
+            logger.error(f"Error sending initial state: {e}")
+            await websocket.send("!initError")
 
-async def handle_current_playback(websocket):
-    result = sp.current_playback()
-    if result:
-        artist_names = ', '.join(artist['name'] for artist in result['item']['artists'])
-        track_name = result['item']['name']
-        await websocket.send(f"!current{artist_names}\t{track_name}")
-    else:
-        await websocket.send("!currentNone")
+    async def process_message(self, message: str, websocket: WebSocketServerProtocol) -> None:
+        """Process incoming WebSocket messages."""
+        try:
+            parts = message.split(";")
+            command = parts[0]
+            query = parts[1] if len(parts) > 1 else ""
+            extra1 = parts[2] if len(parts) > 2 else ""
+            extra2 = parts[3] if len(parts) > 3 else ""
 
-async def send_playlists(websocket):
-    playlists = sp.current_user_playlists()
-    formatted_playlists = [f"{playlist['name']}\t{playlist['images'][0]['url'] if playlist['images'] else 'No Image'}" for playlist in playlists['items']]
-    await websocket.send("!playlists" + "\t".join(formatted_playlists))
+            handlers = {
+                'current': self.handle_current_playback,
+                'playlists': self.send_playlists,
+                'next': self.handle_next_track,
+                'previous': self.handle_previous_track,
+                'pause': self.handle_pause,
+                'resume': self.handle_resume,
+                'volume': lambda ws: self.handle_volume(ws, extra1),
+                'shuffle': lambda ws: self.handle_shuffle(ws, True),
+                'shuffle_off': lambda ws: self.handle_shuffle(ws, False),
+                'repeat': lambda ws: self.handle_repeat(ws, 'context'),
+                'repeat_off': lambda ws: self.handle_repeat(ws, 'off'),
+                'repeat_one': lambda ws: self.handle_repeat(ws, 'track'),
+                'search': lambda ws: self.handle_search(ws, query, extra2),
+                'addqueue': lambda ws: self.handle_add_queue(ws, extra1, extra2),
+                'playplaylist': lambda ws: self.handle_play_playlist(ws, extra1),
+                'seek': lambda ws: self.handle_seek(ws, extra1)
+            }
 
-async def monitor_spotify_playback():
-    last_status = None
-    last_track = None
-    while True:
-        result = sp.current_playback()
-        if result:
-            is_playing = result['is_playing']
-            current_status = 'Playing' if is_playing else 'Paused'
-            artist_names = ', '.join(artist['name'] for artist in result['item']['artists'])
-            track_name = result['item']['name']
-            current_track = f"{artist_names} - {track_name}"
-            canvas = f"https://spotify-canvas-api-weld.vercel.app/spotify?id={result['item']['uri']}"
+            handler = handlers.get(command)
+            if handler:
+                await handler(websocket)
+            else:
+                logger.warning(f"Unknown command: {command}")
+                await websocket.send("!statusUnknown Command")
+        except Exception as e:
+            logger.error(f"Error processing message: {e}")
+            await websocket.send(f"!error{str(e)}")
 
-            if current_status != last_status or current_track != last_track:
-                url = f"{canvas}"
-                response = requests.get(url)
-                print(f"{get_time()} Status: {current_status}, Track: {current_track}, Canvas: {response.text}")
-                last_status = current_status
-                last_track = current_track
-        else:
-            if last_status is not None or last_track is not None:
-                print(f"{get_time()} No playback found or Spotify is not active.")
-                last_status = None
-                last_track = None
+    async def handle_current_playback(self, websocket: WebSocketServerProtocol) -> None:
+        """Handle current playback request with detailed information."""
+        try:
+            result = self.spotify.current_playback()
+            if result and result.get('item'):
+                artist_names = ', '.join(artist['name'] for artist in result['item']['artists'])
+                album = result['item']['album']['name']
+                album_img = result['item']['album']['images'][1]['url'] if result['item']['album']['images'] else "https://developer.spotify.com/assets/branding-guidelines/icon3@2x.png"
+                track_name = result['item']['name']
+                song_progress = result['progress_ms']
+                song_duration = result['item']['duration_ms']
+                is_playing = result['is_playing']
+                volume = result['device']['volume_percent']
+                canvas_url = await self.get_spotify_track_download_url(result['item']['uri'])
+
+                await websocket.send(
+                    f"!current{artist_names}\t{album}\t{album_img}\t{track_name}\t"
+                    f"{volume}\t{song_progress}\t{song_duration}\t{str(is_playing)}\t{canvas_url}"
+                )
+            else:
+                await websocket.send("!currentNone")
+        except Exception as e:
+            logger.error(f"Error handling current playback: {e}")
+            await websocket.send("!statusFatal error in fetching current info")
+
+    async def send_playlists(self, websocket: WebSocketServerProtocol) -> None:
+        """Send playlists to client."""
+        try:
+            playlists = self.spotify.current_user_playlists()
+            formatted_playlists = []
+            for playlist in playlists['items']:
+                name = playlist['name']
+                icon = playlist['images'][0]['url'] if playlist['images'] else "https://developer.spotify.com/assets/branding-guidelines/icon3@2x.png"
+                formatted_playlists.append(f"{name}\b{icon}")
+            
+            output = "!playlists" + "\n".join(formatted_playlists) + "\t\t\t\t\t\t\t"
+            await websocket.send(output)
+        except Exception as e:
+            logger.error(f"Error sending playlists: {e}")
+            await websocket.send("!playlistsError")
+
+    async def handle_next_track(self, websocket: WebSocketServerProtocol) -> None:
+        """Handle next track command."""
+        try:
+            self.spotify.next_track()
+            await websocket.send('!statusPlaying next track')
+        except Exception as e:
+            logger.error(f"Error playing next track: {e}")
+            await websocket.send('!statusError playing next track')
+
+    async def handle_previous_track(self, websocket: WebSocketServerProtocol) -> None:
+        """Handle previous track command."""
+        try:
+            self.spotify.previous_track()
+            await websocket.send('!statusPlaying previous track')
+        except Exception as e:
+            logger.error(f"Error playing previous track: {e}")
+            await websocket.send('!statusError playing previous track')
+
+    async def handle_pause(self, websocket: WebSocketServerProtocol) -> None:
+        """Handle pause command."""
+        try:
+            self.spotify.pause_playback()
+            await websocket.send('!statusPaused')
+        except Exception as e:
+            logger.error(f"Error pausing playback: {e}")
+            await websocket.send('!statusFailed to pause')
+
+    async def handle_resume(self, websocket: WebSocketServerProtocol) -> None:
+        """Handle resume command."""
+        try:
+            self.spotify.start_playback()
+            await websocket.send('!statusPlaying')
+        except Exception as e:
+            logger.error(f"Error resuming playback: {e}")
+            await websocket.send('!statusFailed to resume')
+
+    async def handle_volume(self, websocket: WebSocketServerProtocol, volume: str) -> None:
+        """Handle volume change command."""
+        try:
+            volume_int = int(volume)
+            self.spotify.volume(volume_percent=volume_int)
+            await websocket.send(f'!statusVolume set to: {volume}')
+        except spotipy.exceptions.SpotifyException:
+            await websocket.send('!statusError adjusting volume, it might not be allowed on your selected device')
+        except ValueError:
+            await websocket.send('!statusInvalid volume value')
+
+    async def handle_shuffle(self, websocket: WebSocketServerProtocol, state: bool) -> None:
+        """Handle shuffle command."""
+        try:
+            self.spotify.shuffle(state=state)
+            await websocket.send(f'!statusShuffle {"enabled" if state else "disabled"}')
+        except Exception as e:
+            logger.error(f"Error setting shuffle: {e}")
+            await websocket.send('!statusError setting shuffle state')
+
+    async def handle_repeat(self, websocket: WebSocketServerProtocol, state: str) -> None:
+        """Handle repeat command."""
+        try:
+            self.spotify.repeat(state=state)
+            await websocket.send(f'!statusRepeat mode set to: {state}')
+        except Exception as e:
+            logger.error(f"Error setting repeat: {e}")
+            await websocket.send('!statusError setting repeat state')
+
+    async def handle_search(self, websocket: WebSocketServerProtocol, query: str, extra2: str) -> None:
+        """Handle search command."""
+        try:
+            if not query:
+                return
+            
+            cache_num = 25
+            self.search_results = self.spotify.search(query, limit=cache_num)
+            output = "!search"
+
+            if extra2 == "nameartistcover":
+                for track in self.search_results['tracks']['items']:
+                    track_name = track['name']
+                    artist = ', '.join(artist['name'] for artist in track['artists'])
+                    cover = track['album']['images'][1]['url'] if track['album']['images'] else "https://developer.spotify.com/assets/branding-guidelines/icon3@2x.png"
+                    output += f"{track_name}\b{artist}\b{cover}\n"
+                output += "\t\t\t\t\t\t\t"
+
+            output = output[:-2]
+            await websocket.send(output)
+        except Exception as e:
+            logger.error(f"Error performing search: {e}")
+            await websocket.send('!statusError performing search')
+
+    async def handle_add_queue(self, websocket: WebSocketServerProtocol, index: str, source: str) -> None:
+        """Handle add to queue command."""
+        try:
+            if source == 'fromsearch' and self.search_results:
+                track_id = self.search_results['tracks']['items'][int(index)]['id']
+                self.spotify.add_to_queue(track_id)
+                await websocket.send('!statusTrack added to queue')
+            else:
+                await websocket.send('!statusNo search results available')
+        except Exception as e:
+            logger.error(f"Error adding to queue: {e}")
+            await websocket.send('!statusError adding track to queue')
+
+    async def handle_play_playlist(self, websocket: WebSocketServerProtocol, playlist_index: str) -> None:
+        """Handle play playlist command."""
+        try:
+            playlists = self.spotify.current_user_playlists()
+            playlist_uri = playlists['items'][int(playlist_index)]['uri']
+            self.spotify.start_playback(context_uri=playlist_uri)
+            await websocket.send('!statusPlaying playlist')
+        except Exception as e:
+            logger.error(f"Error playing playlist: {e}")
+            await websocket.send('!statusError playing playlist')
+
+    async def handle_seek(self, websocket: WebSocketServerProtocol, position: str) -> None:
+        """Handle seek command."""
+        try:
+            position_ms = int(position)
+            self.spotify.seek_track(position_ms)
+            await websocket.send(f'!statusSeeked to position: {position_ms}ms')
+        except Exception as e:
+            logger.error(f"Error seeking track: {e}")
+            await websocket.send('!statusError seeking track')
+
+    async def monitor_spotify_playback(self) -> None:
+        """Monitor Spotify playback changes."""
+        while True:
+            try:
+                result = self.spotify.current_playback()
+                if result and result.get('item'):
+                    current_state = {
+                        'is_playing': result['is_playing'],
+                        'track_id': result['item']['id'],
+                        'uri': result['item']['uri']
+                    }
+
+                    if current_state != self.last_playback_state:
+                        artist_names = ', '.join(artist['name'] for artist in result['item']['artists'])
+                        track_name = result['item']['name']
+                        status = 'Playing' if current_state['is_playing'] else 'Paused'
+                        
+                        # Fetch canvas URL asynchronously
+                        canvas_url = await self.get_spotify_track_download_url(current_state['uri'])
+                        
+                        logger.info(
+                            f"Status: {status}, Track: {artist_names} - {track_name}, Canvas: {canvas_url}"
+                        )
+                        self.last_playback_state = current_state
+                elif self.last_playback_state:
+                    logger.info("No playback found or Spotify is not active.")
+                    self.last_playback_state = {}
+                
+                await asyncio.sleep(1)
+            except Exception as e:
+                # Log error with a general message
+                logger.error(f"Error monitoring playback: {e}")
+                await asyncio.sleep(5)
+
+    async def get_spotify_track_download_url(self, track_uri):
+        """Retrieves the download URL for a Spotify track from canvasdownloader.com."""
+        url = f"https://www.canvasdownloader.com/canvas?link=https://open.spotify.com/track/{track_uri.split(':')[-1]}"
+        try:
+            response = await self.session.get(url)
+            response.raise_for_status()
+            soup = BeautifulSoup(await response.text(), 'html.parser')
+            download_button = soup.find('button', {'class': 'download-button'})
+            if download_button:
+                download_link = download_button['onclick'].split("'")[1]
+                return download_link
+            else:
+                return None
+        except Exception as e:
+            # Handle the error gracefully, returning None
+            return None
+
+    async def start(self) -> None:
+        """Start the WebSocket server and monitoring."""
+        await self.initialize()
+        try:
+            server = await websockets.serve(self.handle_websocket, "localhost", self.websocket_port)
+            logger.info(f"WebSocket server started on port {self.websocket_port}")
+
+            await asyncio.gather(
+                server.wait_closed(),
+                self.monitor_spotify_playback()
+            )
+        finally:
+            await self.cleanup()
 
 async def main():
-    server_task = websockets.serve(server, "localhost", 8765)
-    monitor_task = monitor_spotify_playback()
-    await asyncio.gather(server_task, monitor_task)
+    while True:
+        try:
+            server = SpotifyWebSocketServer()
+            await server.start()
+        except Exception as e:
+            logger.error(f"Server error: {e}")
+            logger.info("Restarting server in 5 seconds...")
+            await asyncio.sleep(5)
 
 if __name__ == "__main__":
-    asyncio.run(main())
-
-
-
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logger.info("Server shutdown requested")
+    except Exception as e:
+        logger.error(f"Fatal error: {e}")
