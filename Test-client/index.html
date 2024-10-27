@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spotify WebSocket Test Interface</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.3.0/css/all.min.css"
+    integrity="sha512-SzlrxWUlpfuzQ+pcUCosxcglQRNAq/DZjVsC0lE40xsADsfeQoEypE+enwcOiGjk/bSuGGKHEyjSoQ1zVisanQ=="
+    crossorigin="anonymous" referrerpolicy="no-referrer"/> 
+    <style>
+body {
+    font-family: 'Arial', sans-serif;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: #1a1a1a; /* Dark background */
+    color: #ffffff; /* White text */
+}
+
+.container {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); /* Two columns */
+    gap: 20px;
+}
+
+.panel {
+    background-color: #282828; /* Darker grey for panels */
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+}
+
+.now-playing {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.album-art {
+    width: 150px;
+    height: 150px;
+    object-fit: cover;
+    border-radius: 4px;
+}
+
+.controls {
+    display: flex;
+    gap: 10px;
+    margin: 20px 0;
+}
+
+button {
+    background-color: #1db954; /* Spotify green */
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-weight: bold; /* Make button text bold */
+}
+
+button:hover {
+    background-color: #1ed760; /* Slightly lighter green on hover */
+}
+
+.volume-slider {
+    width: 200px;
+}
+
+.search-results {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.track-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    border-bottom: 1px solid #333;
+    cursor: pointer;
+    color: #ddd; /* Lighter grey for track items */
+}
+
+.track-item:hover {
+    background-color: #333;
+}
+
+.playlists {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 15px;
+}
+
+.playlist-item {
+    text-align: center;
+    cursor: pointer;
+}
+
+.playlist-item img {
+    width: 150px;
+    height: 150px;
+    object-fit: cover;
+    border-radius: 4px;
+}
+
+.status {
+    color: #1db954;
+    margin-top: 10px;
+}
+
+.error {
+    color: #ff4444;
+}
+
+.video-player {
+    width: 640px;
+    height: 360px;
+    margin: 20px auto;
+    border: 1px solid #333;
+}
+
+#canvasUrlInput {
+    margin-top: 10px;
+}
+
+/* Icon styling for specific buttons */
+#playPauseBtn i {
+    font-size: 1.2em;
+}
+
+#previousBtn i {
+    font-size: 1.1em;
+}
+
+#nextBtn i {
+    font-size: 1.1em;
+}
+
+#shuffleBtn i {
+    font-size: 1.1em;
+}
+
+#repeatBtn i {
+    font-size: 1.1em;
+}
+
+/* Styling for the "Now Playing" section */
+#trackName {
+    font-size: 1.2em;
+    font-weight: bold;
+}
+
+#artistName,
+#albumName {
+    color: #888; /* Light grey for artist and album names */
+}
+
+/* Styling for the progress slider */
+#progressSlider {
+    -webkit-appearance: none; /* Remove default slider appearance */
+    appearance: none;
+    width: 100%;
+    height: 6px;
+    background: #333; /* Dark grey track */
+    outline: none;
+    border-radius: 6px;
+}
+
+#progressSlider::-webkit-slider-thumb { /* Chrome & Safari */
+    -webkit-appearance: none;
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    background: #1db954; /* Green slider thumb */
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+#progressSlider::-moz-range-thumb { /* Firefox */
+    width: 12px;
+    height: 12px;
+    background: #1db954; /* Green slider thumb */
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+/* Styling for the volume slider */
+#volume::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 15px;
+    height: 15px;
+    background: #1db954;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+#volume::-moz-range-thumb {
+    width: 15px;
+    height: 15px;
+    background: #1db954;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+/* Styling for the search input */
+#searchInput {
+    padding: 10px;
+    border-radius: 4px;
+    border: 1px solid #333;
+    background-color: #282828;
+    color: #ddd;
+    width: 100%;
+}
+
+/* Styling for the "Status & Debug" section */
+pre {
+    background-color: #333;
+    padding: 10px;
+    border-radius: 4px;
+    overflow-x: auto; /* Allow scrolling horizontally */
+}
+
+/* Styling for the playlist items */
+.playlist-item:hover {
+    background-color: #333;
+}
+
+/* Styling for the "Playlists" panel title */
+.panel h2 {
+    color: #1db954;
+}
+
+/* Styling for the "Video Player" panel title */
+.panel h2 {
+    color: #1db954;
+}
+    </style>
+</head>
+<body>
+    <h1>Spotify WebSocket Test Interface</h1>
+
+    <div>
+        <button onclick="connect()">Connect</button>
+        <button onclick="disconnect()">Disconnect</button>
+        <span id="connectionStatus">Disconnected</span>
+    </div>
+
+    <div class="container">
+        <div class="panel">
+            <h2>Now Playing</h2>
+            <div class="now-playing">
+                <img id="albumArt" class="album-art" src="https://developer.spotify.com/assets/branding-guidelines/icon3@2x.png" alt="Album Art">
+                <div>
+                    <h3 id="trackName">No track playing</h3>
+                    <p id="artistName">-</p>
+                    <p id="albumName">-</p>
+                </div>
+            </div>
+
+            <div>
+                <span id="songPosition">0:00</span> / <span id="songDuration">0:00</span>
+                <input type="range" id="progressSlider" min="0" max="100" value="0" oninput="seekTo(this.value)">
+            </div>
+
+            <div class="controls">
+                <button onclick="sendCommand('previous')" id="previousBtn">
+                    <i class="fas fa-step-backward"></i>
+                </button>
+                <button onclick="sendCommand('pause')" id="playPauseBtn">
+                    <i class="fas fa-play"></i>
+                </button>
+                <button onclick="sendCommand('next')" id="nextBtn">
+                    <i class="fas fa-step-forward"></i>
+                </button>
+            </div>
+
+            <div>
+                <label for="volume">Volume:</label>
+                <input type="range" id="volume" class="volume-slider" min="0" max="100" value="50"
+                       oninput="sendCommand('volume', '', this.value)">
+            </div>
+
+            <div class="controls">
+                <button onclick="sendCommand('shuffle')" id="shuffleBtn">
+                    <i class="fas fa-random"></i>
+                </button>
+                <button onclick="sendCommand('repeat')" id="repeatBtn">
+                    <i class="fas fa-redo-alt"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>Search</h2>
+            <input type="text" id="searchInput" placeholder="Search tracks..."
+                   onkeyup="if(event.key === 'Enter') performSearch()">
+            <button onclick="performSearch()">Search</button>
+            <div id="searchResults" class="search-results"></div>
+        </div>
+
+        <div class="panel">
+            <h2>Playlists</h2>
+            <button onclick="sendCommand('playlists')">Load Playlists</button>
+            <div id="playlists" class="playlists"></div>
+        </div>
+
+        <div class="panel">
+            <h2>Video Player</h2>
+            <div class="video-player">
+                <video id="videoPlayer" controls width="640" height="360" autoplay mute>
+                    Your browser does not support the video tag.
+                </video>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>Status & Debug</h2>
+            <div id="status" class="status"></div>
+            <pre id="debug"></pre>
+        </div>
+    </div>
+
+    <script>
+        let ws;
+        let isPlaying = false;
+        let isShuffled = false;
+        let repeatState = 'off';
+        let songDuration = 0;
+        let songPosition = 0;
+        let currentCanvasUrl = null; // Store the current Canvas URL
+
+        function connect() {
+            ws = new WebSocket('ws://localhost:8765');
+
+            ws.onopen = () => {
+                updateStatus('Connected to server');
+                updateConnectionStatus('Connected');
+                sendCommand('current');
+                sendCommand('playlists');
+            };
+
+            function updateConnectionStatus(status) {
+                document.getElementById('connectionStatus').textContent = status;
+            }
+
+            ws.onclose = () => {
+                updateStatus('Disconnected from server', true);
+                updateConnectionStatus('Disconnected');
+                setTimeout(connect, 5000); // Attempt reconnection after 5 seconds
+            };
+
+            ws.onmessage = (event) => {
+                handleMessage(event.data);
+            };
+
+            ws.onerror = (error) => {
+                updateStatus('WebSocket error: ' + error, true);
+            };
+        }
+
+        function disconnect() {
+            if (ws) {
+                ws.close();
+            }
+        }
+
+        function handleMessage(message) {
+            const command = message.substring(0, message.indexOf(message.match(/[A-Z\d]/)));
+            const data = message.substring(message.indexOf(message.match(/[A-Z\d]/)));
+
+            switch(command) {
+                case '!current':
+                    const [artist, album, albumImg, track, volume, progress, duration, playing, canvasUrl] = data.split('\t');
+                    document.getElementById('artistName').textContent = artist;
+                    document.getElementById('albumName').textContent = album;
+                    document.getElementById('trackName').textContent = track;
+                    document.getElementById('albumArt').src = albumImg;
+                    document.getElementById('volume').value = volume;
+                    songDuration = duration;
+                    songPosition = progress;
+                    updateSongTime();
+                    document.getElementById('progressSlider').max = songDuration;
+                    document.getElementById('progressSlider').value = songPosition;
+                    isPlaying = playing === 'True';
+                    document.getElementById('playPauseBtn').innerHTML = isPlaying ? '<i class="fas fa-pause"></i>' : '<i class="fas fa-play"></i>';
+
+                    // Update Canvas URL in the video player only if it has changed
+                    if (canvasUrl !== currentCanvasUrl) { 
+                        const videoPlayer = document.getElementById('videoPlayer');
+                        videoPlayer.src = canvasUrl;
+                        videoPlayer.muted = true;
+                        videoPlayer.loop = true;
+                        videoPlayer.play().catch(error => {
+                            console.error("Autoplay error:", error);
+                        });
+                        currentCanvasUrl = canvasUrl; // Update the stored Canvas URL
+                    }
+                    break;
+
+                case '!search':
+                    const results = data.split('\n');
+                    const searchResults = document.getElementById('searchResults');
+                    searchResults.innerHTML = '';
+                    results.forEach((result, index) => {
+                        const [track, artist, cover] = result.split('\b');
+                        const div = document.createElement('div');
+                        div.className = 'track-item';
+                        div.onclick = () => sendCommand('addqueue', index, 'fromsearch');
+                        div.innerHTML = `
+                            <img src="${cover}" alt="${track}" style="width: 50px; height: 50px;">
+                            <div>
+                                <div>${track}</div>
+                                <div style="font-size: 0.8em; color: #888;">${artist}</div>
+                            </div>
+                        `;
+                        searchResults.appendChild(div);
+                    });
+                    break;
+
+                case '!playlists':
+                    const playlists = data.split('\n');
+                    const playlistsDiv = document.getElementById('playlists');
+                    playlistsDiv.innerHTML = '';
+                    playlists.forEach((playlist, index) => {
+                        const [name, image] = playlist.split('\b');
+                        const div = document.createElement('div');
+                        div.className = 'playlist-item';
+                        div.onclick = () => sendCommand('playplaylist', '', index);
+                        div.innerHTML = `
+                            <img src="${image}" alt="${name}">
+                            <div>${name}</div>
+                        `;
+                        playlistsDiv.appendChild(div);
+                    });
+                    break;
+
+                case '!status':
+                    updateStatus(data);
+                    break;
+
+                case '!init':
+                    const [shuffle, repeat] = data.split('\t');
+                    isShuffled = shuffle === 'True';
+                    repeatState = repeat;
+                    isPlaying = playing === 'True'; // Use existing isPlaying
+                    updateControls();
+                    break;
+
+                default:
+                    document.getElementById('debug').textContent = message;
+            }
+        }
+
+        function sendCommand(command, query = '', extra1 = '', extra2 = '') {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(`${command};${query};${extra1};${extra2}`);
+            } else {
+                updateStatus('Not connected to server', true);
+            }
+        }
+
+        function performSearch() {
+            const query = document.getElementById('searchInput').value;
+            if (query) {
+                sendCommand('search', query, '', 'nameartistcover');
+            }
+        }
+
+        function updateStatus(message, isError = false) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = isError ? 'status error' : 'status';
+        }
+
+        function updateControls() {
+            document.getElementById('shuffleBtn').style.backgroundColor = 
+                isShuffled ? '#1ed760' : '#1db954';
+            document.getElementById('repeatBtn').style.backgroundColor = 
+                repeatState !== 'off' ? '#1ed760' : '#1db954';
+            document.getElementById('playPauseBtn').innerHTML = 
+                isPlaying ? '<i class="fas fa-pause"></i>' : '<i class="fas fa-play"></i>'; 
+        }
+
+        function updateSongTime() {
+            const minutes = Math.floor(songPosition / 60);
+            const seconds = Math.floor(songPosition % 60).toString().padStart(2, '0');
+            const minutesDuration = Math.floor(songDuration / 60);
+            const secondsDuration = Math.floor(songDuration % 60).toString().padStart(2, '0');
+            document.getElementById('songPosition').textContent = `${minutes}:${seconds}`;
+            document.getElementById('songDuration').textContent = `${minutesDuration}:${secondsDuration}`;
+        }
+
+        function seekTo(position) {
+            sendCommand('seek', '', position);
+        }
+
+        // Connect when page loads
+        connect();
+
+        // Update song position every second and send 'current' command
+        setInterval(function() {
+            songPosition++;
+            updateSongTime();
+            document.getElementById('progressSlider').value = songPosition;
+            sendCommand('current'); // Send command to get latest info
+        }, 1000);
+    </script>
+</body>
+</html>
