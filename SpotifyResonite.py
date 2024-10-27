@@ -11,10 +11,24 @@ import websockets
 from websockets.server import WebSocketServerProtocol
 from bs4 import BeautifulSoup
 
-# Configure logging
+# Color codes for terminal output
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m' + '\033[1m'  # Bold OKCYAN
+    OKGREEN = '\033[92m' + '\033[1m'  # Bold OKGREEN
+    WARNING = '\033[93m' + '\033[1m'  # Bold WARNING
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+# Configure logging with color
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
+    format=f'{bcolors.OKBLUE}%(asctime)s{bcolors.ENDC} - '
+           f'{bcolors.OKGREEN}%(levelname)s{bcolors.ENDC} - '
+           f'{bcolors.ENDC}%(message)s',
     datefmt='[%d/%m/%Y %H:%M:%S]'
 )
 logger = logging.getLogger(__name__)
@@ -58,13 +72,13 @@ class SpotifyWebSocketServer:
             for attempt in range(retry_count):
                 try:
                     self.spotify.devices()
-                    logger.info("Connected to Spotify successfully!")
+                    logger.info(f"{bcolors.OKGREEN}Connected to Spotify successfully!{bcolors.ENDC}")
                     break
                 except Exception as e:
                     if attempt == retry_count - 1:
                         raise
                     logger.warning(f"Connection attempt {attempt + 1} failed: {e}. Retrying...")
-                    await asyncio.sleep(1)
+                    await asyncio.sleep(0.3)
 
         except Exception as e:
             logger.error(f"Failed to initialize Spotify client: {e}")
@@ -77,18 +91,18 @@ class SpotifyWebSocketServer:
 
     async def handle_websocket(self, websocket: WebSocketServerProtocol) -> None:
         """Handle WebSocket connections."""
-        logger.info('Client connected!')
+        logger.info(f'{bcolors.OKGREEN}Client connected!{bcolors.ENDC}')
         try:
             # Send initial state
             await self.send_initial_state(websocket)
             async for message in websocket:
                 await self.process_message(message, websocket)
         except websockets.exceptions.ConnectionClosed:
-            logger.info("Client disconnected normally")
+            logger.info(f"{bcolors.OKGREEN}Client disconnected normally{bcolors.ENDC}")
         except Exception as e:
             logger.error(f"WebSocket error: {e}")
         finally:
-            logger.info("Client disconnected")
+            logger.info(f"{bcolors.OKGREEN}Client disconnected{bcolors.ENDC}")
 
     async def send_initial_state(self, websocket: WebSocketServerProtocol) -> None:
         """Send initial state to newly connected client."""
@@ -311,7 +325,7 @@ class SpotifyWebSocketServer:
             await websocket.send('!statusError seeking track')
 
     async def monitor_spotify_playback(self) -> None:
-        """Monitor Spotify playback changes."""
+        """Monitor Spotify playback changes with enhanced logging."""
         while True:
             try:
                 result = self.spotify.current_playback()
@@ -330,12 +344,18 @@ class SpotifyWebSocketServer:
                         # Fetch canvas URL asynchronously
                         canvas_url = await self.get_spotify_track_download_url(current_state['uri'])
                         
+                        track_url = f"https://open.spotify.com/track/{result['item']['id']}"
+
+                        # Use ANSI escape codes for clickable links without showing the URL
+                        # For "Status", we simulate a click by sending a command to the application
                         logger.info(
-                            f"Status: {status}, Track: {artist_names} - {track_name}, Canvas: {canvas_url}"
+                            f"{bcolors.OKCYAN}Status:{bcolors.ENDC} \033]8;;spotify:toggle_playback\033\\{status}\033]8;;\033\\, "
+                            f"{bcolors.OKCYAN}Track:{bcolors.ENDC} \033]8;;spotify:{track_url}\033\\{bcolors.BOLD}{track_name}\033]8;;\033\\{bcolors.ENDC}, "
+                            f"{bcolors.OKCYAN}Canvas:{bcolors.ENDC} \033]8;;{canvas_url}\033\\{canvas_url}\033]8;;\033\\" 
                         )
                         self.last_playback_state = current_state
                 elif self.last_playback_state:
-                    logger.info("No playback found or Spotify is not active.")
+                    logger.info(f"{bcolors.OKCYAN}No playback found or Spotify is not active.{bcolors.ENDC}")
                     self.last_playback_state = {}
                 
                 await asyncio.sleep(1)
@@ -382,13 +402,13 @@ async def main():
             await server.start()
         except Exception as e:
             logger.error(f"Server error: {e}")
-            logger.info("Restarting server in 5 seconds...")
+            logger.info(f"{bcolors.WARNING}Restarting server in 5 seconds...{bcolors.ENDC}")
             await asyncio.sleep(5)
 
 if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        logger.info("Server shutdown requested")
+        logger.info(f"{bcolors.OKGREEN}Server shutdown requested{bcolors.ENDC}")
     except Exception as e:
         logger.error(f"Fatal error: {e}")
